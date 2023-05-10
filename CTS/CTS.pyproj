@@ -4,7 +4,8 @@
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>218c4189-3e8b-4c41-92b8-1f85c354f195</ProjectGuid>
     <ProjectHome>.</ProjectHome>
-    <StartupFile>CTS.py</StartupFile>
+    <StartupFile>
+    </StartupFile>
     <SearchPath>
     </SearchPath>
     <WorkingDirectory>.</WorkingDirectory>
@@ -22,7 +23,6 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="CP_Modeling.py" />
-    <Compile Include="CTS.py" />
     <Compile Include="Data_Processing.py" />
     <Compile Include="GA_Modeling.py" />
     <Compile Include="Main.py" />
