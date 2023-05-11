@@ -1,4 +1,13 @@
-from deap import algorithms, base, creator, tools
+import deap
+import numpy as np
+import pandas as pd
+import CP_Modeling
+import GA_Modeling
+import Schedule_Output
+import Data_Processing
+import SpeechTherapySchedulerGUI
+import Main
+import deap
 
 def create_ga_model(shared_availability):
     creator.create("FitnessMin", base.Fitness, weights=(-1.0,))

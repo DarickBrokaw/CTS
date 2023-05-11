@@ -26,6 +26,7 @@
     <Compile Include="Data_Processing.py" />
     <Compile Include="GA_Modeling.py" />
     <Compile Include="Main.py" />
+    <Compile Include="SpeechTherapySchedulerGUI.py" />
     <Compile Include="Schedule_Output.py" />
   </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\Python Tools\Microsoft.PythonTools.targets" />

@@ -1,83 +1,75 @@
-from ortools.sat.python import cp_model
+import tkinter as tk
+from tkinter import filedialog, messagebox
+from tabulate import tabulate
+import pandas as pd
 
-def create_cp_model(shared_availability):
-    model = cp_model.CpModel()
-    variables = []
-    variable_to_index = {}
-    index_to_variable = {}
-    for index, row in shared_availability.iterrows():
-        var_name = f"{row['Therapist']}_{row['Child']}_{row['Day']}_{row['Start']}"
-        var = model.NewBoolVar(var_name)
-        variables.append(var)
-        variable_to_index[var_name] = index
-        index_to_variable[index] = var
 
-    # Each therapist can have only one session per day
-    for day in shared_availability['Day'].unique():
-        therapists = shared_availability[shared_availability['Day'] == day]['Therapist'].unique()
-        for therapist in therapists:
-            sessions = []
-            for index, row in shared_availability.iterrows():
-                if row['Day'] == day and row['Therapist'] == therapist:
-                    sessions.append(index_to_variable[index])
-            model.Add(sum(sessions) <= 1)
+def create_availability_dataframe():
+    data = {
+        'Name': [],
+        'Day': [],
+        'Start': [],
+        'End': []
+    }
+    return pd.DataFrame(data)
 
-    # Each child can have only one session per day
-    for day in shared_availability['Day'].unique():
-        children = shared_availability[shared_availability['Day'] == day]['Child'].unique()
-        for child in children:
-            sessions = []
-            for index, row in shared_availability.iterrows():
-                if row['Day'] == day and row['Child'] == child:
-                    sessions.append(index_to_variable[index])
-            model.Add(sum(sessions) <= 1)
+def read_input_data(filename):
+    try:
+        input_data = pd.read_csv(filename)
+    except Exception as e:
+        raise Exception("Failed to read input file: " + str(e))
+    return input_data
 
-    # Sessions involving the same child must be back-to-back
-    for day in shared_availability['Day'].unique():
-        children = shared_availability[shared_availability['Day'] == day]['Child'].unique()
-        for child in children:
-            sessions = []
-            start_times = []
-            for index, row in shared_availability.iterrows():
-                if row['Day'] == day and row['Child'] == child:
-                    sessions.append(index_to_variable[index])
-                    start_times.append(row['Start'])
-            num_sessions = len(sessions)
-            for i in range(num_sessions - 1):
-                if start_times[i+1] - start_times[i] != 1:
-                    model.Add(sessions[i+1] == sessions[i])
+def process_input_data(input_data):
+    therapist_input = input_data[input_data['Type'] == 'therapist'].reset_index(drop=True)
+    children_input = input_data[input_data['Type'] == 'child'].reset_index(drop=True)
 
-    # Minimize the total number of sessions
-    model.Minimize(sum(variables))
+    therapist_availability = create_availability_dataframe()
+    children_availability = create_availability_dataframe()
 
-    return model
+    for i, row in therapist_input.iterrows():
+        name = row['Name']
+        for day in ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']:
+            start = row[day + ' Start']
+            end = row[day + ' End']
+            if pd.notna(start) and pd.notna(end):
+                therapist_availability = therapist_availability.append({
+                    'Name': name,
+                    'Day': day,
+                    'Start': start,
+                    'End': end
+                }, ignore_index=True)
 
-class SolutionPrinter(cp_model.CpSolverSolutionCallback):
-    def __init__(self, variables):
-        cp_model.CpSolverSolutionCallback.__init__(self)
-        self._variables = variables
-        self._solution_count = 0
+    for i, row in children_input.iterrows():
+        name = row['Name']
+        for day in ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']:
+            start = row[day + ' Start']
+            end = row[day + ' End']
+            if pd.notna(start) and pd.notna(end):
+                children_availability = children_availability.append({
+                    'Name': name,
+                    'Day': day,
+                    'Start': start,
+                    'End': end
+                }, ignore_index=True)
 
-    def on_solution_callback(self):
-        self._solution_count += 1
+    return therapist_availability, children_availability
 
-    def solution_count(self):
-        return self._solution_count
+def find_shared_availability(therapist_availability, children_availability):
+    shared_availability = []
 
-def solve_cp_model(cp_model, shared_availability):
-    solver = cp_model.CpSolver()
-    variables = []
-    solution_printer = SolutionPrinter(variables)
-    solver.SearchForAllSolutions(cp_model, solution_printer)
+    for _, t_avail in therapist_availability.iterrows():
+        for _, c_avail in children_availability.iterrows():
+            if t_avail["Day"] == c_avail["Day"]:
+                start_time = max(t_avail["Start"], c_avail["Start"])
+                end_time = min(t_avail["End"], c_avail["End"])
+                if start_time < end_time:
+                    shared_availability.append({
+                        "Therapist": t_avail["Name"],
+                        "Child": c_avail["Name"],
+                        "Day": t_avail["Day"],
+                        "Start": start_time,
+                        "End": end_time
+                    })
 
-    schedule = []
-    for _, row in shared_availability.iterrows():
-        var_name = f"{row['Therapist']}_{row['Child']}_{row['Day']}_{row['Start']}"
-        if solver.Value(variables[variable_to_index[var_name]]) == 1:
-            schedule.append({
-                'Therapist': row['Therapist'],
-                'Child': row['Child'],
-                'Day': row['Day'],
-                'Start': row['Start'],
-                'End':
-
+    return pd.DataFrame(shared_availability)
